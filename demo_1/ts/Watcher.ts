@@ -29,3 +29,19 @@ function parsePath(path: string): Function {
     return obj;
   };
 }
+
+function setter(_path: string, _val: any) {
+  const keys: string[] = _path.split(".");
+  let res: any;
+  let key: string;
+  return (obj: any) => {
+    keys.forEach(elem => {
+      elem = elem.replace(/\s*/g, "");
+      if (!obj) return;
+      res = obj;
+      key = elem;
+      obj = obj[elem];
+    });
+    res[key] = _val;
+  };
+}

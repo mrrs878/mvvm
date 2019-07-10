@@ -65,25 +65,46 @@ class Compile {
     this.data = _data;
 
     let fragement: DocumentFragment = document.createDocumentFragment();
-    let child: ChildNode | null = null;
-    while ((child = this.el && this.el.firstChild))
+    let child: Element | null = null;
+    while ((child = this.el && this.el.firstElementChild))
       fragement.appendChild(child);
     this.replace(fragement);
     this.el && this.el.appendChild(fragement);
   }
 
-  replace(frgmt: DocumentFragment | ChildNode) {
+  replace(frgmt: DocumentFragment | Element) {
     const EXP = /\{\{(.*)\}\}/;
-    frgmt.childNodes.forEach((node: ChildNode) => {
+    let nodes: HTMLCollection = frgmt.children;
+    for (let i = 0; i < nodes.length; ++i) {
+      let node = nodes[i];
       let text: string | null = node.textContent;
-      if (node.nodeType === 3 && text && EXP.test(text)) {
+      if (text && EXP.test(text) && node.nodeName.toLowerCase() !== "input") {
         let watcher = new Watcher(this.data, RegExp.$1, (newVal: any) => {
           node.textContent = text && text.replace(EXP, newVal);
         });
         watcher.update();
       }
-      if (node.childNodes) this.replace(node);
-    });
+      if (node.nodeName.toLowerCase() === "input") {
+        for (let j = 0; j < node.attributes.length; ++j) {
+          let attribute = node.attributes.item(j);
+          if (attribute && attribute.name.indexOf("v-") === 0) {
+            let exp = attribute.value;
+            let newVal = parsePath(exp).call(this.data, this.data);
+            exp = exp.replace(/\s*/g, "");
+            new Watcher(this.data, exp, () => {
+              node.setAttribute("value", newVal);
+            });
+            node.setAttribute("value", newVal);
+            node.addEventListener("input", e => {
+              let newVal = (<HTMLInputElement><unknown>e.target).value
+              setter(exp, newVal).call(this.data, this.data)
+            });
+            break;
+          }
+        }
+      }
+      if (node.children) this.replace(node);
+    }
   }
 }
 

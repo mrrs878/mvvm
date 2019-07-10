@@ -28,3 +28,19 @@ function parsePath(path) {
         return obj;
     };
 }
+function setter(_path, _val) {
+    var keys = _path.split(".");
+    var res;
+    var key;
+    return function (obj) {
+        keys.forEach(function (elem) {
+            elem = elem.replace(/\s*/g, "");
+            if (!obj)
+                return;
+            res = obj;
+            key = elem;
+            obj = obj[elem];
+        });
+        res[key] = _val;
+    };
+}

@@ -58,7 +58,7 @@ var Compile = /** @class */ (function () {
         this.data = _data;
         var fragement = document.createDocumentFragment();
         var child = null;
-        while ((child = this.el && this.el.firstChild))
+        while ((child = this.el && this.el.firstElementChild))
             fragement.appendChild(child);
         this.replace(fragement);
         this.el && this.el.appendChild(fragement);
@@ -66,17 +66,47 @@ var Compile = /** @class */ (function () {
     Compile.prototype.replace = function (frgmt) {
         var _this = this;
         var EXP = /\{\{(.*)\}\}/;
-        frgmt.childNodes.forEach(function (node) {
+        var nodes = frgmt.children;
+        var _loop_1 = function (i) {
+            var node = nodes[i];
             var text = node.textContent;
-            if (node.nodeType === 3 && text && EXP.test(text)) {
-                var watcher = new Watcher(_this.data, RegExp.$1, function (newVal) {
+            if (text && EXP.test(text) && node.nodeName.toLowerCase() !== "input") {
+                var watcher = new Watcher(this_1.data, RegExp.$1, function (newVal) {
                     node.textContent = text && text.replace(EXP, newVal);
                 });
                 watcher.update();
             }
-            if (node.childNodes)
-                _this.replace(node);
-        });
+            if (node.nodeName.toLowerCase() === "input") {
+                var _loop_2 = function (j) {
+                    var attribute = node.attributes.item(j);
+                    if (attribute && attribute.name.indexOf("v-") === 0) {
+                        var exp_1 = attribute.value;
+                        var newVal_1 = parsePath(exp_1).call(this_1.data, this_1.data);
+                        exp_1 = exp_1.replace(/\s*/g, "");
+                        new Watcher(this_1.data, exp_1, function () {
+                            node.setAttribute("value", newVal_1);
+                        });
+                        node.setAttribute("value", newVal_1);
+                        node.addEventListener("input", function (e) {
+                            var newVal = e.target.value;
+                            setter(exp_1, newVal).call(_this.data, _this.data);
+                        });
+                        return "break";
+                    }
+                };
+                for (var j = 0; j < node.attributes.length; ++j) {
+                    var state_1 = _loop_2(j);
+                    if (state_1 === "break")
+                        break;
+                }
+            }
+            if (node.children)
+                this_1.replace(node);
+        };
+        var this_1 = this;
+        for (var i = 0; i < nodes.length; ++i) {
+            _loop_1(i);
+        }
     };
     return Compile;
 }());
